@@ -4,6 +4,8 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
+import com.google.gson.JsonObject
+import retrofit2.http.GET
 
 interface OpenAIService {
     @POST("v1/chat/completions")
@@ -11,6 +13,11 @@ interface OpenAIService {
         @Header("Authorization") authorization: String,
         @Body request: ChatCompletionRequest
     ): Response<ChatCompletionResponse>
+
+    @GET("v1/models")                           // 通用探活端点
+    suspend fun listModels(
+        @Header("Authorization") authorization: String
+    ): Response<Unit>                           // 只关心 HTTP 码
 }
 
 data class ChatCompletionRequest(

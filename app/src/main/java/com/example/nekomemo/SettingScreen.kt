@@ -88,7 +88,9 @@ fun SettingsScreen(viewModel: VocabularyViewModel) {
                         )
                     }
                 }
+
             }
+
 
             /* === Story Theme === */
             OutlinedTextField(
@@ -112,6 +114,28 @@ fun SettingsScreen(viewModel: VocabularyViewModel) {
             )
 
             Spacer(modifier = Modifier.weight(1f))
+
+            val connState by viewModel.connState.collectAsState()
+
+            OutlinedButton(
+                onClick = { viewModel.checkConnection() },
+                enabled = connState != ConnState.Checking,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (connState == ConnState.Checking) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp)); Text("测试中…")
+                } else {
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(Modifier.width(8.dp)); Text("测试连接")
+                }
+            }
+            when (connState) {
+                ConnState.Success -> Text("✅ 连接成功")
+                ConnState.Fail    -> Text("❌ 连接失败", color = MaterialTheme.colorScheme.error)
+                else -> {}
+            }
+
 
             /* === Save button === */
             Button(

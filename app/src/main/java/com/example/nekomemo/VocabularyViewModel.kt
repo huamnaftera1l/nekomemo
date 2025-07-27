@@ -22,6 +22,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.regex.Pattern
 
+enum class ConnState { Idle, Checking, Success, Fail }
+
 // 简化的 LLM 提供商枚举 - 每个只有一个模型
 enum class LLMProvider(
     val displayName: String,
@@ -40,8 +42,8 @@ enum class LLMProvider(
     ),
     QWEN(
         displayName = "通义千问 Max",
-        baseUrl = "https://dashscope-intl.aliyuncs.com/compatible-mode/",
-        modelName = "qwen-max-2025-01-25"
+        "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/",
+        "qwen-max-2025-01-25"
     )
 }
 
@@ -66,6 +68,32 @@ class VocabularyViewModel(
 
     private val _quizScore = MutableStateFlow(0)
     val quizScore: StateFlow<Int> = _quizScore.asStateFlow()
+
+    /* ----------- 连接测试 ----------- */
+    private val _connState = MutableStateFlow(ConnState.Idle)
+    val connState: StateFlow<ConnState> = _connState.asStateFlow()
+
+    fun checkConnection() {
+        val key = securePrefs.getApiKey().orEmpty()
+        if (key.isBlank()) { _connState.value = ConnState.Fail; return }
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(_uiState.value.llmProvider.baseUrl)
+            .client(OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).build())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        viewModelScope.launch {
+            _connState.value = ConnState.Checking
+            val ok = runCatching {
+                retrofit.create(OpenAIService::class.java)
+                    .listModels("Bearer $key")      // 第 3 步会补这个接口
+                    .isSuccessful
+            }.getOrDefault(false)
+            _connState.value = if (ok) ConnState.Success else ConnState.Fail
+        }
+    }
+
 
     init {
         loadSettings()
@@ -384,3 +412,4 @@ data class VocabularyUiState(
 enum class Screen {
     Home, Settings, Story, Quiz, Result
 }
+
