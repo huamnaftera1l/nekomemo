@@ -17,9 +17,10 @@ class SecurePreferencesManager(context: Context) {
     )
 
     companion object {
-        private const val KEY_API_KEY = "openai_api_key"
+        private const val KEY_API_KEY = "api_key"
         private const val KEY_STORY_THEME = "story_theme"
         private const val KEY_STORY_LENGTH = "story_length"
+        private const val KEY_LLM_PROVIDER = "llm_provider"
     }
 
     fun saveApiKey(apiKey: String) {
@@ -48,5 +49,13 @@ class SecurePreferencesManager(context: Context) {
 
     fun getStoryLength(): Int {
         return sharedPreferences.getInt(KEY_STORY_LENGTH, 250)
+    }
+
+    fun saveLLMProvider(provider: String) {
+        sharedPreferences.edit().putString(KEY_LLM_PROVIDER, provider).apply()
+    }
+
+    fun getLLMProvider(): String {
+        return sharedPreferences.getString(KEY_LLM_PROVIDER, "OPENAI") ?: "OPENAI"
     }
 }

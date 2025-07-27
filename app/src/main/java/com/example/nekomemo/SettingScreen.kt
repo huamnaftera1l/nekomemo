@@ -1,107 +1,129 @@
-package com.example.nekomemo
+package com.example.nekomemo.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.nekomemo.*
 
+/**
+ * 全局「设置」界面。
+ * 依赖 VocabularyViewModel 中的状态与更新函数，不再声明 ViewModel / 枚举等重复实体。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: VocabularyViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    var showApiKey by remember { mutableStateOf(false) }
-    var apiKeyInput by remember { mutableStateOf(uiState.apiKey) }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // 顶部导航栏
-        TopAppBar(
-            title = { Text("⚙️ 设置") },
-            navigationIcon = {
-                IconButton(onClick = { viewModel.navigateToScreen(Screen.Home) }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+    var providerMenuExpanded by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("⚙️ 设置") },
+                navigationIcon = {
+                    IconButton(onClick = { viewModel.navigateToScreen(Screen.Home) }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                    }
                 }
-            }
-        )
-        
-        LazyColumn(
+            )
+        }
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-        item {
-            Card {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+
+            /* === API‑Key === */
+            OutlinedTextField(
+                value = uiState.apiKey,
+                onValueChange = viewModel::updateApiKey,
+                label = { Text("API Key") },
+                placeholder = { Text("sk-…") },
+                visualTransformation = if (uiState.apiKey.isEmpty())
+                    VisualTransformation.None else PasswordVisualTransformation(),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            /* === LLM Provider === */
+            ExposedDropdownMenuBox(
+                expanded = providerMenuExpanded,
+                onExpandedChange = { providerMenuExpanded = !providerMenuExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = uiState.llmProvider.displayName,
+                    onValueChange = { /* read‑only */ },
+                    label = { Text("模型供应商") },
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(providerMenuExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = providerMenuExpanded,
+                    onDismissRequest = { providerMenuExpanded = false }
                 ) {
-                    Text(
-                        text = "🔑 API Key配置",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 🔐 安全的API Key输入框
-                    OutlinedTextField(
-                        value = apiKeyInput,
-                        onValueChange = { apiKeyInput = it },
-                        label = { Text("OpenAI API密钥(暂时只支持这个，日后可能更新其他LLM的支持)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { showApiKey = !showApiKey }) {
-                                Icon(
-                                    if (showApiKey) Icons.Default.Lock else Icons.Default.Lock,
-                                    contentDescription = if (showApiKey) "隐藏" else "显示"
-                                )
-                            }
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row {
-                        Button(
-                            onClick = { viewModel.updateApiKey(apiKeyInput) }
-                        ) {
-                            Text("💾 保存")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        OutlinedButton(
+                    LLMProvider.values().forEach { provider ->
+                        DropdownMenuItem(
+                            text = { Text(provider.displayName) },
                             onClick = {
-                                apiKeyInput = ""
-                                viewModel.updateApiKey("")
+                                viewModel.updateLLMProvider(provider)
+                                providerMenuExpanded = false
                             }
-                        ) {
-                            Text("🗑️ 清除")
-                        }
-                    }
-
-                    // API Key状态指示
-                    if (uiState.apiKey.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = androidx.compose.ui.graphics.Color.Green
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("API密钥被猫猫妥善保管啦！", color = androidx.compose.ui.graphics.Color.Green)
-                        }
+                        )
                     }
                 }
             }
-        }
+
+            /* === Story Theme === */
+            OutlinedTextField(
+                value = uiState.storyTheme,
+                onValueChange = viewModel::updateStoryTheme,
+                label = { Text("故事主题（英文）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            /* === Story Length === */
+            OutlinedTextField(
+                value = uiState.storyLength.toString(),
+                onValueChange = { s ->
+                    s.toIntOrNull()?.let(viewModel::updateStoryLength)
+                },
+                label = { Text("故事长度（词数）") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            /* === Save button === */
+            Button(
+                onClick = { viewModel.navigateToScreen(Screen.Home) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("保存并返回")
+            }
         }
     }
 }
