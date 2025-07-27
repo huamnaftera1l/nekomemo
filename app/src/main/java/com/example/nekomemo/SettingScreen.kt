@@ -45,7 +45,7 @@ fun SettingsScreen(viewModel: VocabularyViewModel) {
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "🔑 API配置",
+                        text = "🔑 API Key配置",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -55,7 +55,7 @@ fun SettingsScreen(viewModel: VocabularyViewModel) {
                     OutlinedTextField(
                         value = apiKeyInput,
                         onValueChange = { apiKeyInput = it },
-                        label = { Text("OpenAI API密钥") },
+                        label = { Text("OpenAI API密钥(暂时只支持这个，日后可能更新其他LLM的支持)") },
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {

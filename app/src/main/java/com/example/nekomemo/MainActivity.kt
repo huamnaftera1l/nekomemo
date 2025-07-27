@@ -48,7 +48,7 @@ fun NekoMemoApp(viewModel: VocabularyViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("🐱 NekoMemo - 智能背单词") },
+                title = { Text("🐱 NekoMemo - 猫猫背单词") },
                 actions = {
                     IconButton(onClick = { viewModel.navigateToScreen(Screen.Settings) }) {
                         Icon(Icons.Default.Settings, contentDescription = "设置")
@@ -202,7 +202,7 @@ fun StoryScreen(viewModel: VocabularyViewModel) {
     ) {
         // 顶部导航栏
         TopAppBar(
-            title = { Text("📖 故事") },
+            title = { Text("故事") },
             navigationIcon = {
                 IconButton(onClick = { viewModel.navigateToScreen(Screen.Home) }) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "返回")
@@ -222,7 +222,7 @@ fun StoryScreen(viewModel: VocabularyViewModel) {
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "📚 背单词故事",
+                            text = "背单词故事",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
