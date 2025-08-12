@@ -142,9 +142,9 @@ fun SettingsScreen(viewModel: VocabularyViewModel) {
                 onClick = { viewModel.navigateToScreen(Screen.About) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("💝", style = MaterialTheme.typography.bodyLarge)
-                Spacer(Modifier.width(8.dp))
-                Text("关于NekoMemo")
+//                Text("💝", style = MaterialTheme.typography.bodyLarge)
+//                Spacer(Modifier.width(8.dp))
+                Text("关于猫猫背单词")
             }
 
             /* === Save button === */

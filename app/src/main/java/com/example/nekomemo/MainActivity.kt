@@ -62,7 +62,7 @@ fun NekoMemoApp(viewModel: VocabularyViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("猫猫背单词 Beta v0.1") },
+                title = { Text("🐱 猫猫背单词 Beta v0.1") },
                 actions = {
                     IconButton(onClick = { viewModel.navigateToScreen(Screen.Settings) }) {
                         Icon(Icons.Default.Settings, contentDescription = "设置")
@@ -298,7 +298,7 @@ fun HomeScreen(viewModel: VocabularyViewModel) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "本应用生成的内容由AI自动生成，不代表开发者立场，开发者不对其准确性和适用性负责。" +
-                            "请勿输入涉及种族歧视、恐怖主义、政治敏感等词语，否则可能导致生成失败或程序异常。\n" +
+                            "请勿输入涉及种族歧视、恐怖主义等词语。" +
                             "因用户不当使用本应用所造成的任何后果，由用户自行承担全部法律责任，开发者不对此承担任何形式的法律或连带责任。",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF666666),
@@ -1069,9 +1069,15 @@ fun AboutScreen(viewModel: VocabularyViewModel) {
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "「猫猫背单词」是我的Android开发练手之作，受我的女友的启发。通过AI生成有趣的故事来帮助记忆单词，让学习更加生动有趣！",
+                            text = "「猫猫背单词」通过AI生成有趣的故事来帮助记忆单词，让学习更加生动有趣！" +
+                                    "开发者是个学渣，过去苦背单词却怎么也背不下来，无论是使用老师的精炼单词本还是" +
+                                    "「墨墨背单词」等产品，最后含泪拿着低分托福成绩单申请大学，与梦校擦肩而过。" +
+                                    "前段时间，正在准备考研的女朋友告诉我，她都是把生词用AI生成一个小故事，来辅助" +
+                                    "自己背单词。受到她的启发，我开始着手开发「猫猫背单词」。" +
+                                    "这不仅是一款学习工具，也是我送给她的一份特别礼物。" +
+                                    "我希望这个App能在我不断的迭代下，成为包括我女朋友在内的所有英语学习者们爱不释手的小帮手。",
                             style = MaterialTheme.typography.bodyMedium,
-                            lineHeight = 20.sp
+                            lineHeight = 25.sp
                         )
                     }
                 }
@@ -1197,7 +1203,7 @@ fun AboutScreen(viewModel: VocabularyViewModel) {
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Email: liu.zl_6@outlook.com" +
+                            text = "Email: liu.zl_6@outlook.com/liu02133@umn.edu" +
                                     "\n" +
                                     "GitHub: huamnaftera1l",
                             style = MaterialTheme.typography.bodyMedium,
