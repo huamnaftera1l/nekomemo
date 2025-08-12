@@ -33,9 +33,16 @@ data class Message(
 )
 
 data class ChatCompletionResponse(
-    val choices: List<Choice>
+    val choices: List<Choice>,
+    val usage: Usage? = null
 )
 
 data class Choice(
     val message: Message
+)
+
+data class Usage(
+    val prompt_tokens: Int = 0,
+    val completion_tokens: Int = 0,
+    val total_tokens: Int = 0
 )

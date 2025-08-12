@@ -305,7 +305,8 @@ class VocabularyViewModel(
             )
 
             if (response.isSuccessful) {
-                val content = response.body()?.choices?.firstOrNull()?.message?.content
+                val responseBody = response.body()
+                val content = responseBody?.choices?.firstOrNull()?.message?.content
                 if (content.isNullOrEmpty()) {
                     throw Exception("API 返回内容为空")
                 }
@@ -323,6 +324,19 @@ class VocabularyViewModel(
                 
                 if (missingWords.isNotEmpty()) {
                     throw Exception("AI未能包含所有单词，缺少：${missingWords.joinToString(", ")}。请重试生成故事。")
+                }
+
+                // 解析token使用情况并显示
+                responseBody.usage?.let { usage ->
+                    val tokenUsage = TokenUsage(
+                        promptTokens = usage.prompt_tokens,
+                        completionTokens = usage.completion_tokens,
+                        totalTokens = usage.total_tokens
+                    )
+                    // 在主线程中显示token使用情况
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        showTokenUsage(tokenUsage)
+                    }
                 }
 
                 content
@@ -575,6 +589,14 @@ class VocabularyViewModel(
     fun hideQRCode() {
         _uiState.value = _uiState.value.copy(showQRCode = null)
     }
+    
+    fun showTokenUsage(tokenUsage: TokenUsage) {
+        _uiState.value = _uiState.value.copy(showTokenUsage = tokenUsage)
+    }
+    
+    fun hideTokenUsage() {
+        _uiState.value = _uiState.value.copy(showTokenUsage = null)
+    }
 
     private fun getDemoStory(): String {
         return """
@@ -600,7 +622,8 @@ data class VocabularyUiState(
     val storyLength: Int = 250,
     val llmProvider: LLMProvider = LLMProvider.OPENAI,
     val userInputWords: String = "",
-    val showQRCode: QRCodeType? = null
+    val showQRCode: QRCodeType? = null,
+    val showTokenUsage: TokenUsage? = null
 )
 
 enum class Screen {

@@ -138,6 +138,14 @@ fun NekoMemoApp(viewModel: VocabularyViewModel) {
                     }
                 }
             }
+            
+            // Token使用情况弹窗
+            uiState.showTokenUsage?.let { tokenUsage ->
+                TokenUsageDialog(
+                    tokenUsage = tokenUsage,
+                    onDismiss = { viewModel.hideTokenUsage() }
+                )
+            }
         }
     }
 }
@@ -1190,6 +1198,115 @@ fun AboutScreen(viewModel: VocabularyViewModel) {
         QRCodeDialog(
             qrType = qrType,
             onDismiss = { viewModel.hideQRCode() }
+        )
+    }
+}
+
+@Composable
+fun TokenUsageDialog(
+    tokenUsage: TokenUsage,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "📊 Token 使用情况",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1976D2)
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "关闭",
+                            tint = Color.Gray
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Token使用统计
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFF3F4F6)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        TokenUsageRow("输入 Tokens", tokenUsage.promptTokens, Color(0xFF10B981))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TokenUsageRow("输出 Tokens", tokenUsage.completionTokens, Color(0xFF3B82F6))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Divider()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TokenUsageRow("总计 Tokens", tokenUsage.totalTokens, Color(0xFF6366F1), isTotal = true)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = "故事生成完成！",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF666666),
+                    textAlign = TextAlign.Center
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("好的")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TokenUsageRow(
+    label: String,
+    value: Int,
+    color: Color,
+    isTotal: Boolean = false
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = if (isTotal) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal
+        )
+        Text(
+            text = value.toString(),
+            style = if (isTotal) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = color
         )
     }
 }
