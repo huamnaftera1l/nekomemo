@@ -196,7 +196,7 @@ fun HomeScreen(viewModel: VocabularyViewModel) {
 @Composable
 fun StoryScreen(viewModel: VocabularyViewModel) {
     val story by viewModel.currentStory.collectAsState()
-    val wordTranslations by viewModel.wordTranslations.collectAsState()
+    val wordDefinitions by viewModel.wordDefinitions.collectAsState()
     
     Column(
         modifier = Modifier.fillMaxSize()
@@ -238,7 +238,7 @@ fun StoryScreen(viewModel: VocabularyViewModel) {
                 }
             }
             
-            if (wordTranslations.isNotEmpty()) {
+            if (wordDefinitions.isNotEmpty()) {
                 item {
                     Card {
                         Column(
@@ -251,23 +251,55 @@ fun StoryScreen(viewModel: VocabularyViewModel) {
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             
-                            wordTranslations.forEach { (word, translation) ->
-                                Row(
+                            wordDefinitions.forEach { wordDef ->
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    )
                                 ) {
-                                    Text(
-                                        text = word,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Text(
-                                        text = translation,
-                                        modifier = Modifier.weight(1f),
-                                        textAlign = TextAlign.End
-                                    )
+                                    Column(
+                                        modifier = Modifier.padding(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = wordDef.word,
+                                                fontWeight = FontWeight.Bold,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                            
+                                            Text(
+                                                text = wordDef.partOfSpeech,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                        
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        
+                                        Text(
+                                            text = wordDef.translation,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        
+                                        wordDef.contextMeaning?.let { context ->
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "💡 $context",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.secondary,
+                                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

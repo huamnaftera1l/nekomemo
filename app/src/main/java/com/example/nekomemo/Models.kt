@@ -1,5 +1,12 @@
 package com.example.nekomemo
 
+data class WordDefinition(
+    val word: String,
+    val partOfSpeech: String,
+    val translation: String,
+    val contextMeaning: String? = null
+)
+
 data class QuizQuestion(
     val word: String,
     val question: String,

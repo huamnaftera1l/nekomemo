@@ -57,8 +57,8 @@ class VocabularyViewModel(
     private val _currentStory = MutableStateFlow("")
     val currentStory: StateFlow<String> = _currentStory.asStateFlow()
 
-    private val _wordTranslations = MutableStateFlow<List<Pair<String, String>>>(emptyList())
-    val wordTranslations: StateFlow<List<Pair<String, String>>> = _wordTranslations.asStateFlow()
+    private val _wordDefinitions = MutableStateFlow<List<WordDefinition>>(emptyList())
+    val wordDefinitions: StateFlow<List<WordDefinition>> = _wordDefinitions.asStateFlow()
 
     private val _quizQuestions = MutableStateFlow<List<QuizQuestion>>(emptyList())
     val quizQuestions: StateFlow<List<QuizQuestion>> = _quizQuestions.asStateFlow()
@@ -144,8 +144,8 @@ class VocabularyViewModel(
                 }
 
                 _currentStory.value = story
-                val words = extractWordTranslations(story)
-                _wordTranslations.value = words
+                val words = extractWordDefinitions(story)
+                _wordDefinitions.value = words
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     currentScreen = Screen.Story
@@ -174,13 +174,14 @@ class VocabularyViewModel(
                     请写一个 $length 词左右的英文故事，必须包含以下所有单词：${wordList.joinToString(", ")}
                     
                     重要要求：
-                    1. 每个单词必须以 **word** (中文释义) 的格式出现
-                    2. 中文翻译要准确简洁
-                    3. 故事要连贯有趣
-                    4. 每个单词只出现一次，且必须全部包含
-                    5. 故事主题：$theme
+                    1. 每个单词必须以 **word** [词性] (中文释义) *[上下文释义]* 的格式出现
+                    2. 词性用英文缩写：n.(名词), v.(动词), adj.(形容词), adv.(副词), prep.(介词)等
+                    3. 中文翻译要准确简洁，上下文释义要说明在此语境下的特定含义
+                    4. 故事要连贯有趣
+                    5. 每个单词只出现一次，且必须全部包含
+                    6. 故事主题：$theme
                     
-                    示例格式：The traveler had to **abandon** (放弃) his quest...
+                    示例格式：The traveler had to **abandon** [v.] (放弃) *在此语境下指放弃原定计划* his quest...
                     """.trimIndent()
                 }
                 else -> {
@@ -189,13 +190,14 @@ class VocabularyViewModel(
                     Write a $length-word English story that includes all of the following vocabulary words: ${wordList.joinToString(", ")}. 
                     
                     Important requirements:
-                    1. Each word must appear in **word** (Chinese translation) format
-                    2. Chinese translations should be accurate and concise
-                    3. The story should be coherent and interesting
-                    4. Each word should appear only once and all must be included
-                    5. Theme: $theme
+                    1. Each word must appear in **word** [part-of-speech] (Chinese translation) *[contextual meaning]* format
+                    2. Part-of-speech abbreviations: n.(noun), v.(verb), adj.(adjective), adv.(adverb), prep.(preposition), etc.
+                    3. Chinese translations should be accurate and concise, contextual meaning explains the specific meaning in this context
+                    4. The story should be coherent and interesting
+                    5. Each word should appear only once and all must be included
+                    6. Theme: $theme
                     
-                    Example format: The traveler had to **abandon** (放弃) his quest...
+                    Example format: The traveler had to **abandon** [v.] (放弃) *give up the original plan in this context* his quest...
                     """.trimIndent()
                 }
             }
@@ -319,45 +321,72 @@ class VocabularyViewModel(
         }
     }
 
-    private fun extractWordTranslations(story: String): List<Pair<String, String>> {
-        val pattern = Pattern.compile("\\*\\*(\\w+)\\*\\*\\s*\\((.*?)\\)")
+    private fun extractWordDefinitions(story: String): List<WordDefinition> {
+        val pattern = Pattern.compile("\\*\\*(\\w+)\\*\\*\\s*\\[([^\\]]+)\\]\\s*\\(([^)]+)\\)\\s*\\*([^*]+)\\*")
         val matcher = pattern.matcher(story)
-        val results = mutableListOf<Pair<String, String>>()
+        val results = mutableListOf<WordDefinition>()
 
         while (matcher.find()) {
             val word = matcher.group(1)?.lowercase() ?: ""
-            val translation = matcher.group(2)?.trim() ?: ""
+            val partOfSpeech = matcher.group(2)?.trim() ?: ""
+            val translation = matcher.group(3)?.trim() ?: ""
+            val contextMeaning = matcher.group(4)?.trim() ?: ""
+            
             if (word.isNotEmpty() && translation.isNotEmpty()) {
-                results.add(Pair(word, translation))
+                results.add(WordDefinition(
+                    word = word,
+                    partOfSpeech = partOfSpeech,
+                    translation = translation,
+                    contextMeaning = if (contextMeaning.isNotEmpty()) contextMeaning else null
+                ))
             }
         }
+        
+        // 如果新格式解析失败，回退到旧格式
+        if (results.isEmpty()) {
+            val oldPattern = Pattern.compile("\\*\\*(\\w+)\\*\\*\\s*\\((.*?)\\)")
+            val oldMatcher = oldPattern.matcher(story)
+            while (oldMatcher.find()) {
+                val word = oldMatcher.group(1)?.lowercase() ?: ""
+                val translation = oldMatcher.group(2)?.trim() ?: ""
+                if (word.isNotEmpty() && translation.isNotEmpty()) {
+                    results.add(WordDefinition(
+                        word = word,
+                        partOfSpeech = "unknown",
+                        translation = translation,
+                        contextMeaning = null
+                    ))
+                }
+            }
+        }
+        
         return results
     }
 
     fun startQuiz() {
-        val questions = generateQuizQuestions(_wordTranslations.value)
+        val questions = generateQuizQuestions(_wordDefinitions.value)
         _quizQuestions.value = questions
         _currentQuizIndex.value = 0
         _quizScore.value = 0
         _uiState.value = _uiState.value.copy(currentScreen = Screen.Quiz)
     }
 
-    private fun generateQuizQuestions(wordTranslations: List<Pair<String, String>>): List<QuizQuestion> {
-        val allTranslations = wordTranslations.map { it.second }
+    private fun generateQuizQuestions(wordDefinitions: List<WordDefinition>): List<QuizQuestion> {
+        val allTranslations = wordDefinitions.map { it.translation }
 
-        return wordTranslations.map { (word, correctTranslation) ->
-            val distractorPool = allTranslations.filter { it != correctTranslation }
+        return wordDefinitions.map { wordDef ->
+            val distractorPool = allTranslations.filter { it != wordDef.translation }
             val numDistractors = minOf(3, distractorPool.size)
             val distractors = distractorPool.shuffled().take(numDistractors)
-            val options = (distractors + correctTranslation).shuffled()
-            val correctIndex = options.indexOf(correctTranslation)
+            val options = (distractors + wordDef.translation).shuffled()
+            val correctIndex = options.indexOf(wordDef.translation)
 
             QuizQuestion(
-                word = word,
-                question = "What is the meaning of the word '$word'?",
+                word = wordDef.word,
+                question = "What is the meaning of the word '${wordDef.word}' (${wordDef.partOfSpeech})?",
                 options = options,
                 correctIndex = correctIndex,
-                correctTranslation = correctTranslation
+                correctTranslation = wordDef.translation
             )
         }
     }
@@ -390,11 +419,11 @@ class VocabularyViewModel(
 
     private fun getDemoStory(): String {
         return """
-            Once upon a time, a young adventurer found himself in a difficult situation. He had to **abandon** (放弃) his original plan when he discovered that the ancient map was **fragile** (脆弱的) and barely readable. The mysterious circumstances seemed to **compel** (强迫) him to take a different path through the **obscure** (模糊的) forest.
+            Once upon a time, a young adventurer found himself in a difficult situation. He had to **abandon** [v.] (放弃) *give up his original plan* when he discovered that the ancient map was **fragile** [adj.] (脆弱的) *easily broken or damaged* and barely readable. The mysterious circumstances seemed to **compel** [v.] (强迫) *force him to take action* him to take a different path through the **obscure** [adj.] (模糊的) *unclear and hard to see* forest.
 
-            Along the way, he met a stranger who tried to **deceive** (欺骗) him with false promises of treasure. However, the adventurer had made a **pledge** (承诺) to his village to return with the sacred artifact. Despite feeling **weary** (疲惫的) from the long journey, he pressed on with **vivid** (生动的) memories of his home motivating him.
+            Along the way, he met a stranger who tried to **deceive** [v.] (欺骗) *trick him with lies* him with false promises of treasure. However, the adventurer had made a **pledge** [n.] (承诺) *a solemn promise* to his village to return with the sacred artifact. Despite feeling **weary** [adj.] (疲惫的) *extremely tired* from the long journey, he pressed on with **vivid** [adj.] (生动的) *clear and detailed* memories of his home motivating him.
 
-            In the end, truth and determination would **prevail** (获胜), and he would finally **embrace** (拥抱) the success that awaited him.
+            In the end, truth and determination would **prevail** [v.] (获胜) *succeed against all odds*, and he would finally **embrace** [v.] (拥抱) *welcome with open arms* the success that awaited him.
         """.trimIndent()
     }
 }
