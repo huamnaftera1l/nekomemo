@@ -101,7 +101,17 @@ fun NekoMemoApp(viewModel: VocabularyViewModel) {
                         ) {
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text("正在生成故事...")
+                            if (uiState.retryAttempt > 0) {
+                                Text("正在生成故事...")
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "尝试 ${uiState.retryAttempt}/5",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF666666)
+                                )
+                            } else {
+                                Text("正在生成故事...")
+                            }
                         }
                     }
                 }
@@ -197,12 +207,29 @@ fun HomeScreen(viewModel: VocabularyViewModel) {
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
                 ) {
                     OutlinedButton(
                         onClick = {
+                            val defaultWords = "abandon\nfragile\ncompel\ndeceive\nobscure\npledge\nweary\nvivid\nprevail\nembrace"
+                            wordInput = defaultWords
+                            viewModel.updateUserInputWords(defaultWords)
+                        },
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "示例单词",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("示例单词", style = MaterialTheme.typography.bodySmall)
+                    }
+                    
+                    OutlinedButton(
+                        onClick = {
                             wordInput = ""
-                            viewModel.clearUserInputWords()
+                            viewModel.updateUserInputWords("")
                         },
                         modifier = Modifier.height(36.dp)
                     ) {

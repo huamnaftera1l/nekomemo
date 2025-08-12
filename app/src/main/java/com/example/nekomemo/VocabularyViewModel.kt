@@ -145,7 +145,7 @@ class VocabularyViewModel(
 
     fun generateStory(wordList: List<String>) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, retryAttempt = 0)
             
             // 保存原始单词列表用于测验
             _originalWordList.value = wordList
@@ -166,12 +166,14 @@ class VocabularyViewModel(
                 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    currentScreen = Screen.Story
+                    currentScreen = Screen.Story,
+                    retryAttempt = 0
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "生成故事失败: ${e.message}"
+                    error = "生成故事失败: ${e.message}",
+                    retryAttempt = 0
                 )
             }
         }
@@ -195,6 +197,11 @@ class VocabularyViewModel(
         var lastException: Exception? = null
         
         repeat(5) { attempt ->
+            // 更新UI显示当前重试次数
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(retryAttempt = attempt + 1)
+            }
+            
             try {
                 return@withContext generateStoryWithAPI(wordList)
             } catch (e: Exception) {
@@ -578,8 +585,8 @@ class VocabularyViewModel(
     }
     
     fun clearUserInputWords() {
-        securePrefs.clearUserInputWords()
-        _uiState.value = _uiState.value.copy(userInputWords = securePrefs.getUserInputWords())
+        securePrefs.saveUserInputWords("")
+        _uiState.value = _uiState.value.copy(userInputWords = "")
     }
     
     fun showQRCode(type: QRCodeType) {
@@ -623,7 +630,8 @@ data class VocabularyUiState(
     val llmProvider: LLMProvider = LLMProvider.OPENAI,
     val userInputWords: String = "",
     val showQRCode: QRCodeType? = null,
-    val showTokenUsage: TokenUsage? = null
+    val showTokenUsage: TokenUsage? = null,
+    val retryAttempt: Int = 0
 )
 
 enum class Screen {
