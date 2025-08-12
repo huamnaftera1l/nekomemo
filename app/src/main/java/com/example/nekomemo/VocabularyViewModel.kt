@@ -75,6 +75,9 @@ class VocabularyViewModel(
     private val _wrongAnswers = MutableStateFlow<List<WrongAnswer>>(emptyList())
     val wrongAnswers: StateFlow<List<WrongAnswer>> = _wrongAnswers.asStateFlow()
 
+    private val _savedStories = MutableStateFlow<List<SavedStory>>(emptyList())
+    val savedStories: StateFlow<List<SavedStory>> = _savedStories.asStateFlow()
+
     /* ----------- 连接测试 ----------- */
     private val _connState = MutableStateFlow(ConnState.Idle)
     val connState: StateFlow<ConnState> = _connState.asStateFlow()
@@ -103,6 +106,7 @@ class VocabularyViewModel(
 
     init {
         loadSettings()
+        loadSavedStories()
     }
 
     private fun loadSettings() {
@@ -114,7 +118,8 @@ class VocabularyViewModel(
                 LLMProvider.valueOf(securePrefs.getLLMProvider())
             } catch (e: Exception) {
                 LLMProvider.OPENAI
-            }
+            },
+            userInputWords = securePrefs.getUserInputWords()
         )
     }
 
@@ -147,7 +152,7 @@ class VocabularyViewModel(
 
             try {
                 val story = if (securePrefs.getApiKey()?.isNotEmpty() == true) {
-                    generateStoryWithAPI(wordList)
+                    generateStoryWithAPIRetry(wordList)
                 } else {
                     getDemoStory()
                 }
@@ -155,6 +160,10 @@ class VocabularyViewModel(
                 _currentStory.value = story
                 val words = extractWordDefinitions(story)
                 _wordDefinitions.value = words
+                
+                // 自动保存故事
+                saveCurrentStory()
+                
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     currentScreen = Screen.Story
@@ -166,6 +175,39 @@ class VocabularyViewModel(
                 )
             }
         }
+    }
+    
+    fun loadDemoStory() {
+        // Demo故事立即加载，不显示加载状态
+        val defaultWords = listOf("abandon", "fragile", "compel", "deceive", "obscure", "pledge", "weary", "vivid", "prevail", "embrace")
+        _originalWordList.value = defaultWords
+        
+        val story = getDemoStory()
+        _currentStory.value = story
+        val words = extractWordDefinitions(story)
+        _wordDefinitions.value = words
+        
+        // Demo故事不保存到历史
+        _uiState.value = _uiState.value.copy(currentScreen = Screen.Story)
+    }
+
+    private suspend fun generateStoryWithAPIRetry(wordList: List<String>): String = withContext(Dispatchers.IO) {
+        var lastException: Exception? = null
+        
+        repeat(5) { attempt ->
+            try {
+                return@withContext generateStoryWithAPI(wordList)
+            } catch (e: Exception) {
+                lastException = e
+                if (attempt < 4) { // 还有重试机会
+                    // 等待1秒再重试
+                    kotlinx.coroutines.delay(1000)
+                }
+            }
+        }
+        
+        // 5次都失败了，抛出详细的错误信息
+        throw Exception("尝试了5次都无法生成完整故事。建议：1) 增加故事长度到400-500词 2) 减少单词数量 3) 更换AI模型。最后错误：${lastException?.message}")
     }
 
     private suspend fun generateStoryWithAPI(wordList: List<String>): String = withContext(Dispatchers.IO) {
@@ -469,14 +511,82 @@ class VocabularyViewModel(
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
+    
+    private fun loadSavedStories() {
+        _savedStories.value = securePrefs.getSavedStories()
+    }
+    
+    private fun saveCurrentStory() {
+        val story = _currentStory.value
+        val words = _wordDefinitions.value
+        val originalWords = _originalWordList.value
+        
+        if (story.isNotEmpty() && words.isNotEmpty()) {
+            val savedStory = SavedStory(
+                id = System.currentTimeMillis().toString(),
+                title = generateStoryTitle(originalWords),
+                content = story,
+                wordDefinitions = words,
+                originalWords = originalWords,
+                theme = securePrefs.getStoryTheme(),
+                createdAt = System.currentTimeMillis(),
+                llmProvider = _uiState.value.llmProvider.displayName
+            )
+            
+            securePrefs.saveStory(savedStory)
+            loadSavedStories() // 刷新列表
+        }
+    }
+    
+    private fun generateStoryTitle(words: List<String>): String {
+        return when {
+            words.isEmpty() -> "Demo故事"
+            words.size <= 3 -> words.joinToString(", ")
+            else -> "${words.take(3).joinToString(", ")}等${words.size}个单词"
+        }
+    }
+    
+    fun loadStory(savedStory: SavedStory) {
+        _currentStory.value = savedStory.content
+        _wordDefinitions.value = savedStory.wordDefinitions
+        _originalWordList.value = savedStory.originalWords
+        _uiState.value = _uiState.value.copy(currentScreen = Screen.Story)
+    }
+    
+    fun deleteStory(storyId: String) {
+        securePrefs.deleteStory(storyId)
+        loadSavedStories() // 刷新列表
+    }
+    
+    fun updateUserInputWords(words: String) {
+        securePrefs.saveUserInputWords(words)
+        _uiState.value = _uiState.value.copy(userInputWords = words)
+    }
+    
+    fun clearUserInputWords() {
+        securePrefs.clearUserInputWords()
+        _uiState.value = _uiState.value.copy(userInputWords = securePrefs.getUserInputWords())
+    }
+    
+    fun showQRCode(type: QRCodeType) {
+        _uiState.value = _uiState.value.copy(showQRCode = type)
+    }
+    
+    fun hideQRCode() {
+        _uiState.value = _uiState.value.copy(showQRCode = null)
+    }
 
     private fun getDemoStory(): String {
         return """
-            Once upon a time, a young adventurer found himself in a difficult situation. He had to **abandon** [v.] (放弃) *give up his original plan* when he discovered that the ancient map was **fragile** [adj.] (脆弱的) *easily broken or damaged* and barely readable. The mysterious circumstances seemed to **compel** [v.] (强迫) *force him to take action* him to take a different path through the **obscure** [adj.] (模糊的) *unclear and hard to see* forest.
+            In the mystical realm of Eldoria, a brave young explorer named Elena faced an impossible quest. When the ancient council asked her to retrieve the Lost Crystal of Wisdom, she knew she could not **abandon** [v.] (放弃) *give up on this crucial mission* her sacred duty, even though the task seemed overwhelming.
 
-            Along the way, he met a stranger who tried to **deceive** [v.] (欺骗) *trick him with lies* him with false promises of treasure. However, the adventurer had made a **pledge** [n.] (承诺) *a solemn promise* to his village to return with the sacred artifact. Despite feeling **weary** [adj.] (疲惫的) *extremely tired* from the long journey, he pressed on with **vivid** [adj.] (生动的) *clear and detailed* memories of his home motivating him.
+            The journey began at dawn, when Elena discovered that the only map to the crystal's location was incredibly **fragile** [adj.] (脆弱的) *easily damaged by time and weather*, its edges crumbling at the slightest touch. The urgency of her mission seemed to **compel** [v.] (强迫) *force her to act immediately* her to move quickly, despite the dangerous path ahead through the **obscure** [adj.] (模糊的) *hidden and mysterious* Shadowlands.
 
-            In the end, truth and determination would **prevail** [v.] (获胜) *succeed against all odds*, and he would finally **embrace** [v.] (拥抱) *welcome with open arms* the success that awaited him.
+            During her travels, Elena encountered a cunning merchant who attempted to **deceive** [v.] (欺骗) *trick her with false information* her by offering fake directions in exchange for her magical compass. However, she had made a solemn **pledge** [n.] (承诺) *sacred vow to her people* to the Crystal Guardians that she would never trade away her protective artifacts.
+
+            As the sun began to set, Elena felt increasingly **weary** [adj.] (疲惫的) *exhausted from the long journey*, but she pressed forward with **vivid** [adj.] (生动的) *bright and clear* memories of her village's suffering motivating every step. She knew that good must **prevail** [v.] (获胜) *triumph over darkness* over the evil forces threatening her homeland.
+
+            Finally, as Elena reached the Crystal Chamber, she was ready to **embrace** [v.] (拥抱) *accept and welcome* whatever challenges awaited her, knowing that her courage and determination had brought her this far on the most important adventure of her life.
         """.trimIndent()
     }
 }
@@ -488,10 +598,16 @@ data class VocabularyUiState(
     val apiKey: String = "",
     val storyTheme: String = "adventure",
     val storyLength: Int = 250,
-    val llmProvider: LLMProvider = LLMProvider.OPENAI
+    val llmProvider: LLMProvider = LLMProvider.OPENAI,
+    val userInputWords: String = "",
+    val showQRCode: QRCodeType? = null
 )
 
 enum class Screen {
-    Home, Settings, Story, Quiz, Result, WrongAnswers
+    Home, Settings, Story, Quiz, Result, WrongAnswers, StoryHistory, About
+}
+
+enum class QRCodeType {
+    WECHAT, ZELLE, PAYPAL
 }
 

@@ -15,6 +15,17 @@ data class WrongAnswer(
     val contextMeaning: String? = null
 )
 
+data class SavedStory(
+    val id: String,
+    val title: String,
+    val content: String,
+    val wordDefinitions: List<WordDefinition>,
+    val originalWords: List<String>,
+    val theme: String,
+    val createdAt: Long,
+    val llmProvider: String
+)
+
 data class QuizQuestion(
     val word: String,
     val question: String,

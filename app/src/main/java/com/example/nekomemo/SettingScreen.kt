@@ -137,6 +137,16 @@ fun SettingsScreen(viewModel: VocabularyViewModel) {
             }
 
 
+            /* === About button === */
+            OutlinedButton(
+                onClick = { viewModel.navigateToScreen(Screen.About) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("💝", style = MaterialTheme.typography.bodyLarge)
+                Spacer(Modifier.width(8.dp))
+                Text("关于NekoMemo")
+            }
+
             /* === Save button === */
             Button(
                 onClick = { viewModel.navigateToScreen(Screen.Home) },
