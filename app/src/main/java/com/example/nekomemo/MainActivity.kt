@@ -173,7 +173,7 @@ fun HomeScreen(viewModel: VocabularyViewModel) {
         ) {
             Icon(Icons.Default.PlayArrow, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("🚀 生成故事")
+            Text("✍️️生成故事")
         }
 
         OutlinedButton(
@@ -185,7 +185,7 @@ fun HomeScreen(viewModel: VocabularyViewModel) {
         ) {
             Icon(Icons.Default.PlayArrow, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("📖 使用演示故事")
+            Text("使用Demo故事")
         }
     }
 }
