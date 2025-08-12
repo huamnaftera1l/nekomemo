@@ -7,6 +7,14 @@ data class WordDefinition(
     val contextMeaning: String? = null
 )
 
+data class WrongAnswer(
+    val word: String,
+    val partOfSpeech: String,
+    val correctTranslation: String,
+    val userAnswer: String,
+    val contextMeaning: String? = null
+)
+
 data class QuizQuestion(
     val word: String,
     val question: String,

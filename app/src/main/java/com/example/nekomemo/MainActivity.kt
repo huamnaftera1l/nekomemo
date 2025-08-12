@@ -23,6 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nekomemo.ui.screens.SettingsScreen
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import java.util.regex.Pattern
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,6 +74,7 @@ fun NekoMemoApp(viewModel: VocabularyViewModel) {
                 Screen.Story -> StoryScreen(viewModel)
                 Screen.Quiz -> QuizScreen(viewModel)
                 Screen.Result -> ResultScreen(viewModel)
+                Screen.WrongAnswers -> WrongAnswersScreen(viewModel)
             }
 
             if (uiState.isLoading) {
@@ -190,6 +196,75 @@ fun HomeScreen(viewModel: VocabularyViewModel) {
     }
 }
 
+// 富文本解析函数
+@Composable
+fun parseRichText(text: String): AnnotatedString {
+    return buildAnnotatedString {
+        val pattern = Pattern.compile("\\*\\*(\\w+)\\*\\*\\s*\\[([^\\]]+)\\]\\s*\\(([^)]+)\\)\\s*\\*([^*]+)\\*")
+        val matcher = pattern.matcher(text)
+        var lastEnd = 0
+        
+        while (matcher.find()) {
+            // 添加前面的普通文本
+            if (matcher.start() > lastEnd) {
+                append(text.substring(lastEnd, matcher.start()))
+            }
+            
+            val word = matcher.group(1) ?: ""
+            val partOfSpeech = matcher.group(2) ?: ""
+            val translation = matcher.group(3) ?: ""
+            val contextMeaning = matcher.group(4) ?: ""
+            
+            // 添加加粗的单词
+            withStyle(
+                style = SpanStyle(
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1976D2)
+                )
+            ) {
+                append(word)
+            }
+            
+            // 添加词性（小字体，紫色）
+            withStyle(
+                style = SpanStyle(
+                    fontSize = 12.sp,
+                    color = Color(0xFF9C27B0)
+                )
+            ) {
+                append(" [$partOfSpeech]")
+            }
+            
+            // 添加翻译（绿色）
+            withStyle(
+                style = SpanStyle(
+                    color = Color(0xFF388E3C)
+                )
+            ) {
+                append(" ($translation)")
+            }
+            
+            // 添加上下文释义（斜体，灰色）
+            withStyle(
+                style = SpanStyle(
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    color = Color(0xFF757575),
+                    fontSize = 14.sp
+                )
+            ) {
+                append(" 💡$contextMeaning")
+            }
+            
+            lastEnd = matcher.end()
+        }
+        
+        // 添加剩余的文本
+        if (lastEnd < text.length) {
+            append(text.substring(lastEnd))
+        }
+    }
+}
+
 // 暂时简化其他屏幕
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -230,7 +305,7 @@ fun StoryScreen(viewModel: VocabularyViewModel) {
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         Text(
-                            text = story,
+                            text = parseRichText(story),
                             style = MaterialTheme.typography.bodyLarge,
                             lineHeight = 24.sp
                         )
@@ -406,6 +481,7 @@ fun QuizScreen(viewModel: VocabularyViewModel) {
 fun ResultScreen(viewModel: VocabularyViewModel) {
     val quizQuestions by viewModel.quizQuestions.collectAsState()
     val quizScore by viewModel.quizScore.collectAsState()
+    val wrongAnswers by viewModel.wrongAnswers.collectAsState()
     
     if (quizQuestions.isEmpty()) return
     
@@ -476,6 +552,23 @@ fun ResultScreen(viewModel: VocabularyViewModel) {
             
             Spacer(modifier = Modifier.height(32.dp))
             
+            // 如果有错题，显示错题本按钮
+            if (wrongAnswers.isNotEmpty()) {
+                Button(
+                    onClick = { viewModel.navigateToScreen(Screen.WrongAnswers) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF6B6B)
+                    )
+                ) {
+                    Icon(Icons.Default.Warning, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("📝 查看错题本 (${wrongAnswers.size}个错题)")
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -495,6 +588,170 @@ fun ResultScreen(viewModel: VocabularyViewModel) {
                     Icon(Icons.Default.Home, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("回到首页")
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WrongAnswersScreen(viewModel: VocabularyViewModel) {
+    val wrongAnswers by viewModel.wrongAnswers.collectAsState()
+    
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // 顶部导航栏
+        TopAppBar(
+            title = { Text("❌ 错题本") },
+            navigationIcon = {
+                IconButton(onClick = { viewModel.navigateToScreen(Screen.Result) }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                }
+            }
+        )
+        
+        if (wrongAnswers.isEmpty()) {
+            // 没有错题时的显示
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "🎉",
+                        style = MaterialTheme.typography.displayLarge
+                    )
+                    Text(
+                        text = "恭喜！没有错题！",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "你已经完全掌握了所有单词！",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            // 有错题时的显示
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFFFFEBEE)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "📊 错题统计",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "共答错 ${wrongAnswers.size} 个单词",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+                
+                wrongAnswers.forEach { wrongAnswer ->
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFFFF3E0)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = wrongAnswer.word,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        color = Color(0xFFD84315)
+                                    )
+                                    
+                                    Text(
+                                        text = wrongAnswer.partOfSpeech,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(8.dp))
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = null,
+                                        tint = Color.Red,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "你的答案：${wrongAnswer.userAnswer}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.Red
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(4.dp))
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.Green,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "正确答案：${wrongAnswer.correctTranslation}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Green
+                                    )
+                                }
+                                
+                                wrongAnswer.contextMeaning?.let { context ->
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "💡 $context",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

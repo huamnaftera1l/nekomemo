@@ -60,6 +60,9 @@ class VocabularyViewModel(
     private val _wordDefinitions = MutableStateFlow<List<WordDefinition>>(emptyList())
     val wordDefinitions: StateFlow<List<WordDefinition>> = _wordDefinitions.asStateFlow()
 
+    private val _originalWordList = MutableStateFlow<List<String>>(emptyList())
+    val originalWordList: StateFlow<List<String>> = _originalWordList.asStateFlow()
+
     private val _quizQuestions = MutableStateFlow<List<QuizQuestion>>(emptyList())
     val quizQuestions: StateFlow<List<QuizQuestion>> = _quizQuestions.asStateFlow()
 
@@ -68,6 +71,9 @@ class VocabularyViewModel(
 
     private val _quizScore = MutableStateFlow(0)
     val quizScore: StateFlow<Int> = _quizScore.asStateFlow()
+
+    private val _wrongAnswers = MutableStateFlow<List<WrongAnswer>>(emptyList())
+    val wrongAnswers: StateFlow<List<WrongAnswer>> = _wrongAnswers.asStateFlow()
 
     /* ----------- 连接测试 ----------- */
     private val _connState = MutableStateFlow(ConnState.Idle)
@@ -135,6 +141,9 @@ class VocabularyViewModel(
     fun generateStory(wordList: List<String>) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
+            
+            // 保存原始单词列表用于测验
+            _originalWordList.value = wordList
 
             try {
                 val story = if (securePrefs.getApiKey()?.isNotEmpty() == true) {
@@ -173,13 +182,16 @@ class VocabularyViewModel(
                     """
                     请写一个 $length 词左右的英文故事，必须包含以下所有单词：${wordList.joinToString(", ")}
                     
-                    重要要求：
+                    ⚠️ 严格要求 - 必须遵守：
                     1. 每个单词必须以 **word** [词性] (中文释义) *[上下文释义]* 的格式出现
                     2. 词性用英文缩写：n.(名词), v.(动词), adj.(形容词), adv.(副词), prep.(介词)等
                     3. 中文翻译要准确简洁，上下文释义要说明在此语境下的特定含义
                     4. 故事要连贯有趣
-                    5. 每个单词只出现一次，且必须全部包含
+                    5. 每个单词只出现一次，且必须全部包含 - 绝对不能遗漏任何一个单词！
                     6. 故事主题：$theme
+                    7. 如果单词太多无法在一个故事中自然包含，请写多个相关的段落或章节
+                    
+                    ⚠️ 重要：输入的${wordList.size}个单词必须全部出现在故事中，一个都不能少！
                     
                     示例格式：The traveler had to **abandon** [v.] (放弃) *在此语境下指放弃原定计划* his quest...
                     """.trimIndent()
@@ -189,13 +201,16 @@ class VocabularyViewModel(
                     """
                     Write a $length-word English story that includes all of the following vocabulary words: ${wordList.joinToString(", ")}. 
                     
-                    Important requirements:
+                    ⚠️ STRICT REQUIREMENTS - MUST FOLLOW:
                     1. Each word must appear in **word** [part-of-speech] (Chinese translation) *[contextual meaning]* format
                     2. Part-of-speech abbreviations: n.(noun), v.(verb), adj.(adjective), adv.(adverb), prep.(preposition), etc.
                     3. Chinese translations should be accurate and concise, contextual meaning explains the specific meaning in this context
                     4. The story should be coherent and interesting
-                    5. Each word should appear only once and all must be included
+                    5. Each word should appear only once and ALL ${wordList.size} WORDS MUST BE INCLUDED - NO EXCEPTIONS!
                     6. Theme: $theme
+                    7. If there are too many words for one story, write multiple related paragraphs or chapters
+                    
+                    ⚠️ CRITICAL: All ${wordList.size} input words must appear in the story - not even one can be missed!
                     
                     Example format: The traveler had to **abandon** [v.] (放弃) *give up the original plan in this context* his quest...
                     """.trimIndent()
@@ -256,6 +271,16 @@ class VocabularyViewModel(
                 // 验证返回的故事是否包含所需格式
                 if (!content.contains("**") || !content.contains("(")) {
                     throw Exception("生成的故事格式不正确，请重试")
+                }
+
+                // 检查是否包含了所有输入的单词
+                val extractedWords = extractWordDefinitions(content)
+                val extractedWordNames = extractedWords.map { it.word.lowercase() }.toSet()
+                val inputWordNames = wordList.map { it.lowercase().trim() }.toSet()
+                val missingWords = inputWordNames - extractedWordNames
+                
+                if (missingWords.isNotEmpty()) {
+                    throw Exception("AI未能包含所有单词，缺少：${missingWords.joinToString(", ")}。请重试生成故事。")
                 }
 
                 content
@@ -364,30 +389,39 @@ class VocabularyViewModel(
     }
 
     fun startQuiz() {
-        val questions = generateQuizQuestions(_wordDefinitions.value)
+        val questions = generateQuizQuestions(_originalWordList.value, _wordDefinitions.value)
         _quizQuestions.value = questions
         _currentQuizIndex.value = 0
         _quizScore.value = 0
+        _wrongAnswers.value = emptyList()
         _uiState.value = _uiState.value.copy(currentScreen = Screen.Quiz)
     }
 
-    private fun generateQuizQuestions(wordDefinitions: List<WordDefinition>): List<QuizQuestion> {
+    private fun generateQuizQuestions(originalWords: List<String>, wordDefinitions: List<WordDefinition>): List<QuizQuestion> {
+        val wordDefMap = wordDefinitions.associateBy { it.word.lowercase() }
         val allTranslations = wordDefinitions.map { it.translation }
+        
+        // 只为故事中实际出现的单词生成测验题目
+        return originalWords.mapNotNull { originalWord ->
+            val word = originalWord.lowercase().trim()
+            val wordDef = wordDefMap[word]
+            
+            wordDef?.let {
+                // 只有在故事中找到了这个单词的定义，才生成题目
+                val distractorPool = allTranslations.filter { it != wordDef.translation }
+                val numDistractors = minOf(3, distractorPool.size)
+                val distractors = distractorPool.shuffled().take(numDistractors)
+                val options = (distractors + wordDef.translation).shuffled()
+                val correctIndex = options.indexOf(wordDef.translation)
 
-        return wordDefinitions.map { wordDef ->
-            val distractorPool = allTranslations.filter { it != wordDef.translation }
-            val numDistractors = minOf(3, distractorPool.size)
-            val distractors = distractorPool.shuffled().take(numDistractors)
-            val options = (distractors + wordDef.translation).shuffled()
-            val correctIndex = options.indexOf(wordDef.translation)
-
-            QuizQuestion(
-                word = wordDef.word,
-                question = "What is the meaning of the word '${wordDef.word}' (${wordDef.partOfSpeech})?",
-                options = options,
-                correctIndex = correctIndex,
-                correctTranslation = wordDef.translation
-            )
+                QuizQuestion(
+                    word = wordDef.word,
+                    question = "What is the meaning of the word '${wordDef.word}' (${wordDef.partOfSpeech})?",
+                    options = options,
+                    correctIndex = correctIndex,
+                    correctTranslation = wordDef.translation
+                )
+            }
         }
     }
 
@@ -399,6 +433,25 @@ class VocabularyViewModel(
             val question = questions[currentIndex]
             if (selectedIndex == question.correctIndex) {
                 _quizScore.value = _quizScore.value + 1
+            } else {
+                // 记录错误答案
+                val userAnswer = if (selectedIndex < question.options.size) {
+                    question.options[selectedIndex]
+                } else {
+                    "未选择"
+                }
+                
+                // 从wordDefinitions中获取词性和上下文信息
+                val wordDef = _wordDefinitions.value.find { it.word.lowercase() == question.word.lowercase() }
+                val wrongAnswer = WrongAnswer(
+                    word = question.word,
+                    partOfSpeech = wordDef?.partOfSpeech ?: "unknown",
+                    correctTranslation = question.correctTranslation,
+                    userAnswer = userAnswer,
+                    contextMeaning = wordDef?.contextMeaning
+                )
+                
+                _wrongAnswers.value = _wrongAnswers.value + wrongAnswer
             }
 
             if (currentIndex + 1 >= questions.size) {
@@ -439,6 +492,6 @@ data class VocabularyUiState(
 )
 
 enum class Screen {
-    Home, Settings, Story, Quiz, Result
+    Home, Settings, Story, Quiz, Result, WrongAnswers
 }
 
