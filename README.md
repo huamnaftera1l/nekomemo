@@ -1,51 +1,54 @@
-# 🐱 NekoMemo - 智能背单词Android应用
+# NekoMemo - AI-Powered Vocabulary Learning Android App
 
-> 基于AI故事生成的沉浸式英语单词学习应用
+> An immersive English vocabulary learning app powered by AI-generated stories
 
-## 📱 项目概述
+## Project Overview
 
-NekoMemo是一款创新的英语学习应用，通过AI生成包含目标单词的连贯故事，让用户在语境中学习单词，然后通过选择题测验加强记忆。应用采用现代Android开发技术栈，支持安全的API密钥存储。
+NekoMemo is an English learning application that generates coherent stories containing target vocabulary words using AI. It allows users to learn words in context and reinforce their memory through multiple-choice quizzes. The app is built with a modern Android development stack and supports secure API key storage.
 
-### 🎯 核心功能流程
+### Core Workflow
 
-1. **单词输入** → 用户输入要学习的英语单词列表
-2. **AI故事生成** → 调用OpenAI/DeepSeek API（暂未支持）生成包含所有单词的英文故事
-3. **单词提取** → 自动识别故事中的 `**word** (中文释义)` 格式
-4. **智能测验** → 生成选择题，中文选项，英文题干
-5. **成绩统计** → 详细的学习报告和进度追踪
+1. **Vocabulary Input** → Users enter a list of English words they want to learn
+2. **AI Story Generation** → Calls the OpenAI/DeepSeek API (not yet supported) to generate an English story containing all target words
+3. **Vocabulary Extraction** → Automatically identifies vocabulary in the `**word** (Chinese definition)` format
+4. **Interactive Quiz** → Generates multiple-choice questions with Chinese answer choices and English prompts
+5. **Score Tracking** → Provides detailed learning results and progress tracking
 
-## 🏗️ 技术架构
+## Technical Architecture
 
-### 核心技术栈
+### Core Technology Stack
+
 - **UI Framework**: Jetpack Compose (Material3)
-- **架构模式**: MVVM + Repository Pattern
-- **异步处理**: Kotlin Coroutines + StateFlow
-- **网络请求**: Retrofit2 + OkHttp3
-- **安全存储**: EncryptedSharedPreferences (AES256)
-- **依赖注入**: Manual DI (可扩展为Hilt)
+- **Architecture Pattern**: MVVM + Repository Pattern
+- **Asynchronous Processing**: Kotlin Coroutines + StateFlow
+- **Networking**: Retrofit2 + OkHttp3
+- **Secure Storage**: EncryptedSharedPreferences (AES256)
+- **Dependency Injection**: Manual DI (can be extended to Hilt)
 
-### 支持的AI服务
-- ✅ **OpenAI GPT-4o** (主要支持)
-- 🔄 **DeepSeek API** (计划支持)
-- 📦 **本地演示故事** (离线模式)
+### Supported AI Services
 
-## 📁 项目结构
+- **OpenAI GPT-4o** (primary support)
+- **DeepSeek API** (planned support)
+- **Local Demo Stories** (offline mode)
+
+## Project Structure
 
 ```
 app/src/main/java/com/example/nekomemo/
-├── MainActivity.kt                 # 主Activity + Compose入口
-├── SecurePreferencesManager.kt     # 🔐 安全存储管理器
-├── VocabularyViewModel.kt          # 🏗️ 主要业务逻辑
-├── Models.kt                       # 📊 数据模型定义
-├── OpenAIService.kt               # 🌐 网络层接口
+├── MainActivity.kt                 # Main Activity + Compose entry point
+├── SecurePreferencesManager.kt     # Secure storage manager
+├── VocabularyViewModel.kt          # Main business logic
+├── Models.kt                       # Data model definitions
+├── OpenAIService.kt                # Networking interface
 └── ui/
-    ├── screens/                   # 🎨 各个界面组件
-    └── theme/                     # 🎨 主题配置
+    ├── screens/                    # UI screen components
+    └── theme/                      # App theme
 ```
 
-## 🔐 安全特性
+## Security Features
 
-### API密钥安全存储
+### Secure API Key Storage
+
 ```kotlin
 class SecurePreferencesManager(context: Context) {
     private val sharedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
@@ -58,15 +61,17 @@ class SecurePreferencesManager(context: Context) {
 }
 ```
 
-**安全保障：**
-- ✅ AES256加密存储
-- ✅ Android Keystore主密钥保护
-- ✅ 一键清除敏感数据
-- ✅ UI层密码模式显示
+**Security Measures:**
 
-## 🌐 API集成架构
+- AES256 encrypted storage
+- Android Keystore master key protection
+- One-click sensitive data removal
+- Password-style display for API keys in the UI
 
-### OpenAI集成
+## API Integration Architecture
+
+### OpenAI Integration
+
 ```kotlin
 interface OpenAIService {
     @POST("v1/chat/completions")
@@ -77,85 +82,91 @@ interface OpenAIService {
 }
 ```
 
-### 故事生成Prompt模板
+### Story Generation Prompt Template
+
 ```
 Write a {length}-word English story including: {wordList}
 
 Requirements:
-1. Each word in **word** (中文释义) format
+1. Each word in **word** (Chinese definition) format
 2. Coherent storyline with {theme} theme
 3. All words appear exactly once
 4. Accurate Chinese translations
 ```
 
-## 🧠 核心算法
+## Core Algorithms
 
-### 单词提取算法
+### Vocabulary Extraction Algorithm
+
 ```kotlin
 fun extractWordTranslations(story: String): List<Pair<String, String>> {
     val pattern = Pattern.compile("\\*\\*(\\w+)\\*\\*\\s*\\((.*?)\\)")
-    // 提取 **abandon** (放弃) 格式的单词和翻译
+    // Extract vocabulary and translations in the **abandon** (放弃) format
 }
 ```
 
-### 测验生成算法
+### Quiz Generation Algorithm
+
 ```kotlin
 fun generateQuizQuestions(wordTranslations: List<Pair<String, String>>): List<QuizQuestion> {
-    // 1. 为每个单词生成3个干扰项
-    // 2. 随机打乱选项顺序
-    // 3. 记录正确答案索引
+    // 1. Generate three distractor choices for each word
+    // 2. Randomly shuffle the answer choices
+    // 3. Record the index of the correct answer
 }
 ```
 
-## 🚀 快速开始
+## Getting Started
 
-### 环境要求
-- **Android Studio**: Hedgehog (2023.1.1) 或更新
+### Requirements
+
+- **Android Studio**: Hedgehog (2023.1.1) or later
 - **Kotlin**: 1.9.22+
 - **Gradle**: 8.2
-- **最低Android版本**: API 24 (Android 7.0)
+- **Minimum Android Version**: API 24 (Android 7.0)
 
-### 安装步骤
+### Installation
+
 ```bash
-# 1. 克隆项目
+# 1. Clone the project
 git clone https://github.com/your-username/nekomemo.git
 
-# 2. 打开Android Studio
-# File → Open → 选择项目文件夹
+# 2. Open the project in Android Studio
+# File → Open → Select the project folder
 
-# 3. 同步依赖
-# 点击 "Sync Project with Gradle Files"
+# 3. Sync dependencies
+# Click "Sync Project with Gradle Files"
 
-# 4. 运行应用
-# 连接设备或启动模拟器，点击运行按钮
+# 4. Run the application
+# Connect an Android device or launch an emulator, then click Run
 ```
 
-### 配置API密钥
-1. 获取OpenAI API密钥
-2. 在应用设置界面输入并保存
-3. 开始生成个性化故事
+### Configure an API Key
 
-## 📊 应用界面流程
+1. Obtain an OpenAI API key
+2. Enter and save the API key on the Settings screen
+3. Start generating personalized stories
+
+## Application Flow
 
 ```mermaid
 graph TB
-    A[主页] --> B[输入单词列表]
-    B --> C[选择故事主题]
-    C --> D[生成AI故事]
-    D --> E[阅读学习故事]
-    E --> F[开始选择题测验]
-    F --> G[查看成绩报告]
-    G --> H[重新测验/返回主页]
+    A[Home] --> B[Enter Vocabulary List]
+    B --> C[Choose Story Theme]
+    C --> D[Generate AI Story]
+    D --> E[Read Story]
+    E --> F[Start Multiple-Choice Quiz]
+    F --> G[View Results]
+    G --> H[Retry Quiz / Return Home]
     
-    A --> I[设置页面]
-    I --> J[API密钥配置]
-    I --> K[故事参数设置]
+    A --> I[Settings]
+    I --> J[API Key Configuration]
+    I --> K[Story Parameters]
 ```
 
+## Technical Details
 
-## 🛠️ 技术细节
+### State Management
 
-### 状态管理
 ```kotlin
 data class VocabularyUiState(
     val isLoading: Boolean = false,
@@ -167,44 +178,48 @@ data class VocabularyUiState(
 )
 ```
 
-### 错误处理策略
-- **网络错误**: 自动降级到演示故事
-- **API限制**: 友好提示和重试机制
-- **解析错误**: 容错处理和用户反馈
+### Error Handling Strategy
 
-### 性能优化
-- **协程**: 非阻塞UI的异步操作
-- **缓存**: 故事和设置的本地缓存
-- **懒加载**: Compose的高效UI渲染
+- **Network Errors**: Automatically falls back to a demo story
+- **API Limitations**: User-friendly error messages and retry mechanism
+- **Parsing Errors**: Fault-tolerant handling and user feedback
 
-## 🤝 贡献指南
+### Performance Optimizations
 
-### 代码规范
-- 遵循Kotlin官方代码风格
-- 使用有意义的变量和函数命名
-- 添加必要的注释和文档
+- **Coroutines**: Asynchronous processing without blocking the UI
+- **Caching**: Local caching for stories and settings
+- **Lazy Loading**: Efficient UI rendering using Compose
 
-### 提交规范
+## Contribution Guide
+
+### Code Style
+
+- Follow the official Kotlin coding conventions
+- Use meaningful variable and function names
+- Add comments and documentation where necessary
+
+### Commit Convention
+
 ```
-feat: 添加DeepSeek API支持
-fix: 修复单词提取正则表达式
-docs: 更新README文档
-style: 优化UI界面布局
+feat: add DeepSeek API support
+fix: fix vocabulary extraction regex
+docs: update README documentation
+style: improve UI layout
 ```
 
-### 开发环境设置
+### Development Environment
+
 ```bash
-# 安装依赖
+# Install dependencies
 ./gradlew dependencies
 
-# 运行测试
+# Run tests
 ./gradlew test
 
-# 检查代码质量
+# Check code quality
 ./gradlew ktlintCheck
 ```
 
-
 ---
 
-**让学习英语变得有趣又高效！🚀**
+**Making English vocabulary learning more engaging and effective!**
